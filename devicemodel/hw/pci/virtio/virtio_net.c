@@ -815,15 +815,8 @@ static void
 virtio_net_tap_setup(struct virtio_net *net, char *devname)
 {
 	char tbuf[80 + 5];	/* room for "acrn_" prefix */
-	char *tbuf_ptr;
 
-	tbuf_ptr = tbuf;
-
-	strcpy(tbuf, "acrn_");
-
-	tbuf_ptr += 5;
-
-	strncat(tbuf_ptr, devname, sizeof(tbuf) - 6);
+	snprintf(tbuf, sizeof(tbuf), "acrn_%s%s", devname, "%d");
 
 	net->virtio_net_rx = virtio_net_tap_rx;
 	net->virtio_net_tx = virtio_net_tap_tx;
@@ -953,9 +946,15 @@ virtio_net_init(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
 
 		if (strncmp(devname, "vale", 4) == 0)
 			virtio_net_netmap_setup(net, devname);
-		if (strncmp(devname, "tap", 3) == 0 ||
-		    strncmp(devname, "vmnet", 5) == 0)
+		else if (strcmp(devname, "tap") == 0 ||
+		    strcmp(devname, "vmnet") == 0)
 			virtio_net_tap_setup(net, devname);
+		else {
+			WPRINTF(("Unknown network backend %s,"
+			        "do you mean tap ?\n", devname));
+			free(devname);
+			return -1;
+		}
 
 		free(devname);
 	}
